@@ -38,23 +38,24 @@ class Book {
 
   factory Book.fromJson(Map<String, dynamic> json) {
     return Book(
-        ISBN: json['ISBN'],
-        title: json['title'],
-        author: json['author'],
-        genre: json['genre'],
-        publisher: json['publisher'],
-        publishDate: json['publish_date'] != null
-            ? (json['publish_date'] as Timestamp).toDate()
-            : null,
-        description: json['description'],
-        language: json['language'],
-        numPages: json['num_pages'],
-        rating: json['rating'],
-        read: json['read'],
-        borrowed: json['borrowed'],
-        favourite: json['favourite'],
-        borrowedTo: json['borrowed_to'],
-        imageURL: json['image']);
+      ISBN: json['ISBN'],
+      title: json['title'],
+      author: json['author'],
+      genre: json['genre'],
+      publisher: json['publisher'],
+      publishDate: json['publish_date'] != null
+          ? (json['publish_date'] as Timestamp).toDate()
+          : null,
+      description: json['description'],
+      language: json['language'],
+      numPages: json['num_pages'],
+      rating: json['rating'],
+      read: json['read'],
+      borrowed: json['borrowed'],
+      favourite: json['favourite'],
+      borrowedTo: json['borrowed_to'],
+      imageURL: json['image'],
+    );
   }
 
   Map<String, dynamic> toJson() {
@@ -73,16 +74,28 @@ class Book {
       'borrowed': borrowed,
       'favourite': favourite,
       'borrowed_to': borrowedTo,
-      'image': imageURL
+      'image': imageURL,
     };
   }
 }
 
-class BookList extends StatelessWidget {
-  final TextEditingController searchController = TextEditingController();
+class BookList extends StatefulWidget {
   final bool Function(Book) filter;
 
-  BookList({super.key, required this.filter});
+  const BookList({super.key, required this.filter});
+
+  @override
+  BookListState createState() => BookListState();
+}
+
+class BookListState extends State<BookList> {
+  final TextEditingController searchController = TextEditingController();
+
+  //final bool Function(Book) filter;
+
+  String searchQuery = '';
+
+  //BookListState({super.key, required this.filter});
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +120,9 @@ class BookList extends StatelessWidget {
                   child: TextField(
                     controller: searchController,
                     onChanged: (query) {
-                      //searchBooks(query);
+                      setState(() {
+                        searchQuery = query;
+                      });
                     },
                     decoration: const InputDecoration(
                       hintText: 'Search by title or author',
@@ -131,6 +146,9 @@ class BookList extends StatelessWidget {
                   return Text('Error: ${snapshot.error}');
                 } else {
                   List<Book> books = snapshot.data!;
+                  if (books.isEmpty) {
+                    return const Center(child: Text('No books available'));
+                  }
                   return GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
@@ -153,9 +171,10 @@ class BookList extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Image.network(
-                                books[index].imageURL ?? '',
-                                fit: BoxFit.cover,
-                              ),
+                                      books[index].imageURL ??
+                                          'assets/logo.png',
+                                      fit: BoxFit.cover,
+                                    ),
                             ),
                             Text(books[index].title),
                           ],
@@ -170,31 +189,27 @@ class BookList extends StatelessWidget {
         ]));
   }
 
-  // void searchBooks(String query) {
-  //   setState(() {
-  //     displayedBooks = allBooks
-  //         .where((book) =>
-  //     book.title.toLowerCase().contains(query.toLowerCase()) ||
-  //         book.author.toLowerCase().contains(query.toLowerCase()))
-  //         .toList();
-  //   });
-  // }
-
   Future<List<Book>> fetchBooksFromFirestore() async {
     final QuerySnapshot<Map<String, dynamic>> querySnapshot =
         await FirebaseFirestore.instance.collection('books').get();
 
     List<Book> books = [];
-    if(querySnapshot.docs.isNotEmpty) {
+    if (querySnapshot.docs.isNotEmpty) {
       books = querySnapshot.docs
           .map((doc) => Book.fromJson(doc.data()))
-          .where(filter)
+          .where(widget.filter)
           .toList();
-    }
 
-      books.sort((a, b) =>
-          (b.publishDate ?? DateTime(0)).compareTo(a.publishDate ?? DateTime(0)));
-      return books;
+      books = books
+          .where((book) =>
+              book.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
+              book.author.toLowerCase().contains(searchQuery.toLowerCase()))
+          .toList();
+
+      books.sort((a, b) => (b.publishDate ?? DateTime(0))
+          .compareTo(a.publishDate ?? DateTime(0)));
+    }
+    return books;
   }
 }
 
@@ -242,7 +257,7 @@ class BookDetailsPageState extends State<BookDetailsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Image.network(
-                      widget.book.imageURL ?? '',
+                      widget.book.imageURL ?? 'assets/logo.png',
                       height: 300,
                       width: 200,
                       fit: BoxFit.cover,

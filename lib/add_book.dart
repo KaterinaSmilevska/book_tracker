@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:async';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'book.dart';
 import 'package:image_picker/image_picker.dart';
@@ -67,7 +69,10 @@ class AddBookFormState extends State<AddBookForm> {
                       child: GestureDetector(
                         onTap: _pickImage,
                         child: _imagePicked
-                            ? Image.network(_imageURL!)
+                            ? Image.network(
+                                _imageURL!,
+                                fit: BoxFit.cover,
+                              )
                             : const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -284,11 +289,16 @@ class AddBookFormState extends State<AddBookForm> {
                               borrowed: isBorrowed,
                               favourite: _isFavourite,
                               borrowedTo: borrowedToController.text,
-                              imageURL: _imageURL
+                              imageURL: _imageURL,
                             );
                             if (_imagePicked) {
-                                saveBookToFirestore(newBook);
+                              saveBookToFirestore(newBook);
                             }
+                            _formKey.currentState!.reset();
+                            setState(() {
+                              _imagePicked = false;
+                              _imageURL = null;
+                            });
                             Navigator.pop(context);
                           }
                         },
@@ -305,11 +315,25 @@ class AddBookFormState extends State<AddBookForm> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
+    String uniqueFileName = DateTime.now().millisecondsSinceEpoch.toString();
+
     if (pickedFile != null) {
-      setState(() {
-        _imagePicked = true;
-        _imageURL = pickedFile.path;
-      });
+      Reference referenceRoot = FirebaseStorage.instance.ref();
+      Reference referenceDirImages = referenceRoot.child('images');
+
+      Reference referenceImageToUpload= referenceDirImages.child(uniqueFileName);
+      await referenceImageToUpload.putFile(File(pickedFile.path));
+      _imageURL = await referenceImageToUpload.getDownloadURL();
+
+      if(mounted) {
+        setState(() {
+          _imagePicked = true;
+        });
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to pick image')),
+      );
     }
   }
 
