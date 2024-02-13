@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:async';
@@ -145,25 +146,26 @@ class AddBookFormState extends State<AddBookForm> {
                     ),
                     TextFormField(
                       controller: publishDateController,
-                      decoration:
-                          const InputDecoration(labelText: 'Publish Date'),
-                      onTap: () async {
-                        // Show date picker and update the selectedDate
-                        DateTime? pickedDate = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(1700),
-                          lastDate: DateTime(2101),
-                        );
-                        if (pickedDate != null && pickedDate != selectedDate) {
-                          setState(() {
-                            selectedDate = pickedDate;
-                            publishDateController.text =
-                                DateFormat('yyyy-MM-dd').format(
-                                    pickedDate); // Update the text field
-                          });
-                        }
-                      },
+                      decoration: InputDecoration(
+                        labelText: 'Publish Date',
+                        suffixIcon: GestureDetector(
+                          onTap: () async {
+                            DateTime? pickedDate = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate,
+                              firstDate: DateTime(1700),
+                              lastDate: DateTime.now(),
+                            );
+                            if (pickedDate != null && pickedDate != selectedDate) {
+                              setState(() {
+                                selectedDate = pickedDate;
+                                publishDateController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
+                              });
+                            }
+                          },
+                          child: const Icon(Icons.calendar_today),
+                        ),
+                      ),
                       validator: (value) {
                         if (value!.isEmpty) {
                           return 'Please enter a publish date';
@@ -179,10 +181,9 @@ class AddBookFormState extends State<AddBookForm> {
                     TextFormField(
                       controller: numPagesController,
                       keyboardType: TextInputType.number,
-                      // Set keyboard type to number
                       decoration: const InputDecoration(labelText: 'Pages'),
                       validator: (value) {
-                        if (value!.isEmpty) {
+                        if(value!.isEmpty) {
                           return 'Please enter the number of pages';
                         }
                         return null;
@@ -193,8 +194,8 @@ class AddBookFormState extends State<AddBookForm> {
                       keyboardType: TextInputType.text,
                       decoration: const InputDecoration(labelText: 'Language'),
                       validator: (value) {
-                        if (value!.isEmpty) {
-                          return 'Please enter a language';
+                        if(value!.isEmpty) {
+                          return 'Please enter the language';
                         }
                         return null;
                       },
@@ -290,6 +291,7 @@ class AddBookFormState extends State<AddBookForm> {
                               favourite: _isFavourite,
                               borrowedTo: borrowedToController.text,
                               imageURL: _imageURL,
+                              userId: FirebaseAuth.instance.currentUser!.uid,
                             );
                             if (_imagePicked) {
                               saveBookToFirestore(newBook);
@@ -325,11 +327,16 @@ class AddBookFormState extends State<AddBookForm> {
       await referenceImageToUpload.putFile(File(pickedFile.path));
       _imageURL = await referenceImageToUpload.getDownloadURL();
 
-      if(mounted) {
-        setState(() {
-          _imagePicked = true;
-        });
+      if(_imageURL != null) {
+        if(mounted) {
+          setState(() {
+            _imagePicked = true;
+          });
+        }
+      } else {
+        _imageURL = 'assets/logo.png';
       }
+
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to pick image')),
@@ -338,12 +345,26 @@ class AddBookFormState extends State<AddBookForm> {
   }
 
   Future<void> saveBookToFirestore(Book book) async {
-    await FirebaseFirestore.instance.collection('books').add(book.toJson());
+    final user = FirebaseAuth.instance.currentUser;
+
+    if(user != null) {
+      await FirebaseFirestore.instance.collection('books')
+          .add({...book.toJson(),
+          'user_id': user.uid},
+      );
+    }
   }
 
   Future<List<Book>> fetchBooksFromFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return [];
+    }
+
     final QuerySnapshot<Map<String, dynamic>> querySnapshot =
-        await FirebaseFirestore.instance.collection('books').get();
+        await FirebaseFirestore.instance.collection('books')
+            .where('user_id', isEqualTo: user.uid)
+            .get();
 
     return querySnapshot.docs.map((doc) => Book.fromJson(doc.data())).toList();
   }

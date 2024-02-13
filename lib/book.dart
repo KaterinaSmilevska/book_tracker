@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'edit_book.dart';
@@ -10,14 +11,15 @@ class Book {
   String publisher;
   DateTime? publishDate;
   String? description;
-  String language;
-  int numPages;
+  String? language;
+  int? numPages;
   int? rating;
   bool read;
   bool borrowed;
   bool favourite;
   String? borrowedTo;
   String? imageURL;
+  String userId;
 
   Book(
       {required this.ISBN,
@@ -27,14 +29,15 @@ class Book {
       required this.publisher,
       this.publishDate,
       this.description,
-      required this.language,
-      required this.numPages,
+      this.language,
+      this.numPages,
       this.rating,
       required this.read,
       required this.borrowed,
       required this.favourite,
       this.borrowedTo,
-      this.imageURL});
+      this.imageURL,
+      required this.userId});
 
   factory Book.fromJson(Map<String, dynamic> json) {
     return Book(
@@ -55,6 +58,7 @@ class Book {
       favourite: json['favourite'],
       borrowedTo: json['borrowed_to'],
       imageURL: json['image'],
+      userId: json['user_id'],
     );
   }
 
@@ -75,6 +79,7 @@ class Book {
       'favourite': favourite,
       'borrowed_to': borrowedTo,
       'image': imageURL,
+      'user_id': userId,
     };
   }
 }
@@ -91,11 +96,7 @@ class BookList extends StatefulWidget {
 class BookListState extends State<BookList> {
   final TextEditingController searchController = TextEditingController();
 
-  //final bool Function(Book) filter;
-
   String searchQuery = '';
-
-  //BookListState({super.key, required this.filter});
 
   @override
   Widget build(BuildContext context) {
@@ -171,10 +172,9 @@ class BookListState extends State<BookList> {
                           children: [
                             Expanded(
                               child: Image.network(
-                                      books[index].imageURL ??
-                                          'assets/logo.png',
-                                      fit: BoxFit.cover,
-                                    ),
+                                books[index].imageURL ?? 'assets/logo.png',
+                                fit: BoxFit.cover,
+                              ),
                             ),
                             Text(books[index].title),
                           ],
@@ -190,8 +190,16 @@ class BookListState extends State<BookList> {
   }
 
   Future<List<Book>> fetchBooksFromFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return [];
+    }
+
+    
     final QuerySnapshot<Map<String, dynamic>> querySnapshot =
-        await FirebaseFirestore.instance.collection('books').get();
+        await FirebaseFirestore.instance.collection('books')
+            .where('user_id', isEqualTo: user.uid)
+            .get();
 
     List<Book> books = [];
     if (querySnapshot.docs.isNotEmpty) {
@@ -334,11 +342,6 @@ class BookDetailsPageState extends State<BookDetailsPage> {
                           });
                         }
                       }),
-                      if (isBorrowed)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16.0),
-                          child: Text('To:  ${widget.book.borrowedTo}'),
-                        ),
                       const SizedBox(height: 16.0),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -370,10 +373,35 @@ class BookDetailsPageState extends State<BookDetailsPage> {
   }
 
   void editBook() async {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => EditBookForm(book: widget.book)),
-    );
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      String userId = user.uid;
+      widget.book.userId = userId;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => EditBookForm(book: widget.book)),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Authentication Required'),
+            content: const Text('Please login to edit this book.'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   void deleteBook() async {
@@ -458,7 +486,21 @@ class BookDetailsPageState extends State<BookDetailsPage> {
       children: [
         Checkbox(
           value: value,
-          onChanged: onChanged,
+          onChanged: (newValue) async {
+            if (onChanged != null) {
+              onChanged(newValue);
+              widget.book.read = newValue!;
+              await FirebaseFirestore.instance
+                  .collection('books')
+                  .where('ISBN', isEqualTo: widget.book.ISBN)
+                  .get()
+                  .then((QuerySnapshot querySnapshot) {
+                querySnapshot.docs.forEach((doc) {
+                  doc.reference.update(widget.book.toJson());
+                });
+              });
+            }
+          },
         ),
         Text(
           label,

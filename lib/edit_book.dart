@@ -1,7 +1,7 @@
-import 'dart:typed_data';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'book.dart';
@@ -31,7 +31,6 @@ class EditBookFormState extends State<EditBookForm> {
   TextEditingController borrowedController = TextEditingController();
   TextEditingController favouriteController = TextEditingController();
   TextEditingController borrowedToController = TextEditingController();
-  TextEditingController imageURLController = TextEditingController();
 
   String? _imageURL;
   DateTime selectedDate = DateTime.now();
@@ -51,14 +50,14 @@ class EditBookFormState extends State<EditBookForm> {
     publishDateController.text =
         DateFormat('yyyy-MM-dd').format(widget.book.publishDate!);
     descriptionController.text = widget.book.description!;
-    languageController.text = widget.book.language;
+    languageController.text = widget.book.language!;
     numPagesController.text = widget.book.numPages.toString();
     _rating = widget.book.rating!;
     isRead = widget.book.read;
     isBorrowed = widget.book.borrowed;
     _isFavourite = widget.book.favourite;
     borrowedToController.text = widget.book.borrowedTo!;
-    imageURLController.text = _imageURL!;
+    _imageURL = widget.book.imageURL;
   }
 
   @override
@@ -79,18 +78,20 @@ class EditBookFormState extends State<EditBookForm> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 200,
-                    height: 300,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.black,
-                        width: 2.0,
+                  InkWell(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: 200,
+                      height: 300,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.black,
+                          width: 2.0,
+                        ),
                       ),
-                    ),
-                    child: InkWell(
-                      onTap: _pickImage,
-                      child: const Column(
+                      child: _imageURL != null
+                          ? Image.network(_imageURL!)
+                          : const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
@@ -109,9 +110,6 @@ class EditBookFormState extends State<EditBookForm> {
                       ),
                     ),
                   ),
-                  _imageURL != null
-                      ? Image.network(_imageURL!)
-                      : Container(),
                   TextFormField(
                     controller: isbnController,
                     decoration: const InputDecoration(labelText: 'ISBN'),
@@ -164,23 +162,26 @@ class EditBookFormState extends State<EditBookForm> {
                   ),
                   TextFormField(
                     controller: publishDateController,
-                    decoration:
-                    const InputDecoration(labelText: 'Publish Date'),
-                    onTap: () async {
-                      // Show date picker and update the selectedDate
-                      DateTime? pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate,
-                        firstDate: DateTime(1700),
-                        lastDate: DateTime(2101),
-                      );
-                      if (pickedDate != null && pickedDate != selectedDate) {
-                        setState(() {
-                          selectedDate = pickedDate;
-                          publishDateController.text = DateFormat('yyyy-MM-dd').format(pickedDate); // Update the text field
-                        });
-                      }
-                    },
+                    decoration: InputDecoration(
+                      labelText: 'Publish Date',
+                      suffixIcon: GestureDetector(
+                        onTap: () async {
+                          DateTime? pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime(1700),
+                            lastDate: DateTime.now(),
+                          );
+                          if (pickedDate != null && pickedDate != selectedDate) {
+                            setState(() {
+                              selectedDate = pickedDate;
+                              publishDateController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
+                            });
+                          }
+                        },
+                        child: const Icon(Icons.calendar_today),
+                      ),
+                    ),
                     validator: (value) {
                       if (value!.isEmpty) {
                         return 'Please enter a publish date';
@@ -206,7 +207,7 @@ class EditBookFormState extends State<EditBookForm> {
                     },
                   ),
                   TextFormField(
-                    controller: numPagesController,
+                    controller: languageController,
                     keyboardType: TextInputType.text,
                     decoration: const InputDecoration(labelText: 'Language'),
                     validator: (value) {
@@ -306,8 +307,7 @@ class EditBookFormState extends State<EditBookForm> {
                         widget.book.borrowed = isBorrowed;
                         widget.book.favourite = _isFavourite;
                         widget.book.borrowedTo = borrowedToController.text;
-                        widget.book.imageURL = (imageURLController.text.isNotEmpty ?
-                        Uint8List.fromList(imageURLController.text.codeUnits) : null) as String?;
+                        widget.book.imageURL = _imageURL;
 
                         updateBookInFirestore(widget.book);
                         Navigator.pop(context);
@@ -328,14 +328,17 @@ class EditBookFormState extends State<EditBookForm> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
+    String uniqueFileName = DateTime.now().millisecondsSinceEpoch.toString();
     if (pickedFile != null) {
-      setState(() {
-        _imageURL = pickedFile.path;
-      });
+      Reference referenceRoot = FirebaseStorage.instance.ref();
+      Reference referenceDirImages = referenceRoot.child('images');
+
+      Reference referenceImageToUpload= referenceDirImages.child(uniqueFileName);
+      await referenceImageToUpload.putFile(File(pickedFile.path));
+      _imageURL = await referenceImageToUpload.getDownloadURL();
     }
   }
 
-  ///TODO:
   Future<void> updateBookInFirestore(Book book) async {
     await FirebaseFirestore.instance
         .collection('books')

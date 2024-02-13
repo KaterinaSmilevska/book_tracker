@@ -80,7 +80,7 @@ class FooterState extends State<Footer> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               ListTile(
-                title: const Text('Add a book manually'),
+                title: const Text('Add a book'),
                 onTap: (){
                   Navigator.pop(context);
                   Navigator.push(
