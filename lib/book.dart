@@ -1,5 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'edit_book.dart';
@@ -279,7 +279,6 @@ class BookDetailsPageState extends State<BookDetailsPage> {
                       width: 200,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
-                        // Display a placeholder image when there's an error loading the image
                         return Container(
                           decoration: BoxDecoration(
                             border:

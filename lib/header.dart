@@ -34,7 +34,6 @@ class Header extends StatelessWidget {
         IconButton(
           icon: const Icon(Icons.menu, color: Colors.white),
           onPressed: () {
-            // Open the drawer using the GlobalKey
             scaffoldKey.currentState?.openDrawer();
           },
         )
@@ -46,7 +45,7 @@ class Header extends StatelessWidget {
       BuildContext context, GlobalKey<ScaffoldState> scaffoldKey) {
     return Drawer(
       child: Container(
-        color: Colors.teal, // Background color of the opened drawer
+        color: Colors.teal,
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
@@ -62,7 +61,6 @@ class Header extends StatelessWidget {
                     width: 60,
                   ),
                   const SizedBox(width: 10),
-                  // Adjust the spacing between the logo and text
                   const Text(
                     'BookTracker',
                     style: TextStyle(
@@ -79,7 +77,7 @@ class Header extends StatelessWidget {
                 style: TextStyle(color: Colors.white),
               ),
               onTap: () async {
-                await launchLibrariesMap();
+                await launchLibrariesMap(context);
                 scaffoldKey.currentState?.openEndDrawer();
               },
             ),
@@ -89,7 +87,7 @@ class Header extends StatelessWidget {
                 style: TextStyle(color: Colors.white),
               ),
               onTap: () async {
-                await launchBookstoresMap();
+                await launchBookstoresMap(context);
                 scaffoldKey.currentState?.openEndDrawer();
               },
             ),
@@ -114,7 +112,7 @@ class Header extends StatelessWidget {
     );
   }
 
-  Future<void> launchLibrariesMap() async {
+  Future<void> launchLibrariesMap(BuildContext context) async {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
@@ -129,31 +127,27 @@ class Header extends StatelessWidget {
     );
 
     double radius = 5000;
-
-    // Formulate the query for bookstores near the user's location
     String query =
         'libraries near ${position.latitude},${position.longitude}&radius=$radius';
-
-    // Launch the map application with the specified query
     String mapUrl = 'https://www.google.com/maps/search/?api=1&query=$query';
     try {
       await launchUrlString(mapUrl);
     } catch (e) {
-      print('Could not launch $mapUrl');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to load libraries map'),
+        ),
+      );
     }
   }
 
-  Future<void> launchBookstoresMap() async {
-    // Check if location permissions are granted
+  Future<void> launchBookstoresMap(BuildContext context) async {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      // Request location permissions
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        // Handle denied permission
-        print('Location permission denied');
         return;
       }
     }
@@ -171,7 +165,11 @@ class Header extends StatelessWidget {
     try {
       await launchUrlString(mapUrl);
     } catch (e) {
-      print('Could not launch $mapUrl');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to load bookstores map'),
+        ),
+      );
     }
   }
 }
@@ -193,7 +191,7 @@ class RatedBooksPage extends StatelessWidget {
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No rated books'));
+            return const Center(child: Text('No rated books'));
           } else {
             List<Book> ratedBooks = snapshot.data!;
             return GridView.builder(

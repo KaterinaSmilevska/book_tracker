@@ -206,7 +206,6 @@ class EditBookFormState extends State<EditBookForm> {
                   TextFormField(
                     controller: numPagesController,
                     keyboardType: TextInputType.number,
-                    // Set keyboard type to number
                     decoration: const InputDecoration(labelText: 'Pages'),
                     validator: (value) {
                       if (value!.isEmpty) {

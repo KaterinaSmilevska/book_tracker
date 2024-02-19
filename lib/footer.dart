@@ -108,38 +108,28 @@ class FooterState extends State<Footer> {
       if (result.type == ResultType.Barcode &&
           result.format == BarcodeFormat.ean13) {
         String scannedISBN = result.rawContent;
-        launchBookDetailsPage(scannedISBN);
+        launchBookDetailsPage(scannedISBN, context);
       } else {
         // Handle other barcode formats or invalid scans
-        print('Invalid scan or unsupported barcode format');
       }
     } catch (e) {
       // Handle errors that may occur during scanning
-      print('Error during scanning: $e');
     }
   }
 
-  void launchBookDetailsPage(String isbn) async {
-    print('$isbn');
+  void launchBookDetailsPage(String isbn, BuildContext context) async {
     String url = 'https://isbndb.com/book/$isbn';
 
-    // Check if the URL can be launched
     try {
       await launchUrlString(Uri.parse(url).toString());
-      //Book book = await fetchBookDetails(isbn);
-      //saveBookToFirestore(book);
     } catch (e) {
-      print('Error launching URL: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to load books page'),
+        ),
+      );
     }
   }
-
-// Future<Book> fetchBookDetails(String isbn) async {
-//   return Book.fromJson(json);
-// }
-//
-// void saveBookToFirestore(Book book) async {
-//   await FirebaseFirestore.instance.collection('books').add(book.toJson());
-// }
 }
 
 class FavouriteBooksPage extends StatelessWidget {
