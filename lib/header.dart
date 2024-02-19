@@ -9,7 +9,6 @@ import 'package:geolocator/geolocator.dart';
 class Header extends StatelessWidget {
   const Header({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
@@ -116,21 +115,15 @@ class Header extends StatelessWidget {
   }
 
   Future<void> launchLibrariesMap() async {
-    // Check if location permissions are granted
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      // Request location permissions
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        // Handle denied permission
-        print('Location permission denied');
         return;
       }
     }
-
-    // Fetch the user's current location
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
@@ -165,18 +158,15 @@ class Header extends StatelessWidget {
       }
     }
 
-    // Fetch the user's current location
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
 
     double radius = 5000;
 
-    // Formulate the query for bookstores near the user's location
     String query =
         'bookstores near ${position.latitude},${position.longitude}&radius=$radius';
 
-    // Launch the map application with the specified query
     String mapUrl = 'https://www.google.com/maps/search/?api=1&query=$query';
     try {
       await launchUrlString(mapUrl);
@@ -202,6 +192,8 @@ class RatedBooksPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text('No rated books'));
           } else {
             List<Book> ratedBooks = snapshot.data!;
             return GridView.builder(
@@ -234,10 +226,13 @@ class RatedBooksPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8.0),
-                    Text(ratedBooks[index].title),
+                    Center(
+                        child: Text(ratedBooks[index].title,
+                            textAlign: TextAlign.center)),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: buildStarRating(ratedBooks[index].rating, context),
+                      children:
+                          buildStarRating(ratedBooks[index].rating, context),
                     ),
                   ],
                 );

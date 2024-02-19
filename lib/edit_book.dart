@@ -90,7 +90,15 @@ class EditBookFormState extends State<EditBookForm> {
                         ),
                       ),
                       child: _imageURL != null
-                          ? Image.network(_imageURL!)
+                          ? Image.network(_imageURL!,
+                      errorBuilder: (context, error, stackTrace) {
+                            return Image.asset(
+                              'assets/logo.png',
+                              height: 300,
+                              width: 200,
+                              fit: BoxFit.cover,
+                            );
+                      })
                           : const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -162,6 +170,7 @@ class EditBookFormState extends State<EditBookForm> {
                   ),
                   TextFormField(
                     controller: publishDateController,
+                    readOnly: true,
                     decoration: InputDecoration(
                       labelText: 'Publish Date',
                       suffixIcon: GestureDetector(

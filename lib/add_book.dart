@@ -146,6 +146,7 @@ class AddBookFormState extends State<AddBookForm> {
                     ),
                     TextFormField(
                       controller: publishDateController,
+                      readOnly: true,
                       decoration: InputDecoration(
                         labelText: 'Publish Date',
                         suffixIcon: GestureDetector(
@@ -183,7 +184,7 @@ class AddBookFormState extends State<AddBookForm> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: 'Pages'),
                       validator: (value) {
-                        if(value!.isEmpty) {
+                        if (value!.isEmpty) {
                           return 'Please enter the number of pages';
                         }
                         return null;
@@ -194,7 +195,7 @@ class AddBookFormState extends State<AddBookForm> {
                       keyboardType: TextInputType.text,
                       decoration: const InputDecoration(labelText: 'Language'),
                       validator: (value) {
-                        if(value!.isEmpty) {
+                        if (value!.isEmpty) {
                           return 'Please enter the language';
                         }
                         return null;
@@ -323,12 +324,13 @@ class AddBookFormState extends State<AddBookForm> {
       Reference referenceRoot = FirebaseStorage.instance.ref();
       Reference referenceDirImages = referenceRoot.child('images');
 
-      Reference referenceImageToUpload= referenceDirImages.child(uniqueFileName);
+      Reference referenceImageToUpload =
+          referenceDirImages.child(uniqueFileName);
       await referenceImageToUpload.putFile(File(pickedFile.path));
       _imageURL = await referenceImageToUpload.getDownloadURL();
 
-      if(_imageURL != null) {
-        if(mounted) {
+      if (_imageURL != null) {
+        if (mounted) {
           setState(() {
             _imagePicked = true;
           });
@@ -336,7 +338,6 @@ class AddBookFormState extends State<AddBookForm> {
       } else {
         _imageURL = 'assets/logo.png';
       }
-
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to pick image')),
@@ -347,10 +348,9 @@ class AddBookFormState extends State<AddBookForm> {
   Future<void> saveBookToFirestore(Book book) async {
     final user = FirebaseAuth.instance.currentUser;
 
-    if(user != null) {
-      await FirebaseFirestore.instance.collection('books')
-          .add({...book.toJson(),
-          'user_id': user.uid},
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('books').add(
+        {...book.toJson(), 'user_id': user.uid},
       );
     }
   }
@@ -362,7 +362,8 @@ class AddBookFormState extends State<AddBookForm> {
     }
 
     final QuerySnapshot<Map<String, dynamic>> querySnapshot =
-        await FirebaseFirestore.instance.collection('books')
+        await FirebaseFirestore.instance
+            .collection('books')
             .where('user_id', isEqualTo: user.uid)
             .get();
 

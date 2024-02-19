@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'edit_book.dart';
 
 class Book {
@@ -171,12 +172,20 @@ class BookListState extends State<BookList> {
                         child: Column(
                           children: [
                             Expanded(
-                              child: Image.network(
-                                books[index].imageURL ?? 'assets/logo.png',
-                                fit: BoxFit.cover,
-                              ),
+                              child: Image.network(books[index].imageURL!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.grey),
+                                    ),
+                                    child: Image.asset('assets/logo.png',
+                                        fit: BoxFit.cover));
+                              }),
                             ),
-                            Text(books[index].title),
+                            Center(
+                                child: Text(books[index].title,
+                                    textAlign: TextAlign.center)),
                           ],
                         ),
                       );
@@ -195,9 +204,9 @@ class BookListState extends State<BookList> {
       return [];
     }
 
-    
     final QuerySnapshot<Map<String, dynamic>> querySnapshot =
-        await FirebaseFirestore.instance.collection('books')
+        await FirebaseFirestore.instance
+            .collection('books')
             .where('user_id', isEqualTo: user.uid)
             .get();
 
@@ -265,10 +274,23 @@ class BookDetailsPageState extends State<BookDetailsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Image.network(
-                      widget.book.imageURL ?? 'assets/logo.png',
+                      widget.book.imageURL!,
                       height: 300,
                       width: 200,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        // Display a placeholder image when there's an error loading the image
+                        return Container(
+                          decoration: BoxDecoration(
+                            border:
+                                Border.all(color: Colors.grey), // Border color
+                          ),
+                          child: Image.asset('assets/logo.png',
+                              height: 300,
+                              width: 200,
+                              fit: BoxFit.cover), // Placeholder image
+                        );
+                      },
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -342,6 +364,8 @@ class BookDetailsPageState extends State<BookDetailsPage> {
                           });
                         }
                       }),
+                      if (widget.book.borrowed)
+                        buildInfoRow('To:', widget.book.borrowedTo),
                       const SizedBox(height: 16.0),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -455,29 +479,57 @@ class BookDetailsPageState extends State<BookDetailsPage> {
     if (value == null || value.isEmpty) {
       return Container();
     }
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+    if (label == 'PUBLISH DATE') {
+      DateTime publishDate = DateTime.parse(value);
+      String formattedDate = DateFormat('d MMMM, y').format(publishDate);
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
+            const SizedBox(height: 8),
+            Text(
+              formattedDate,
+              style: const TextStyle(
+                fontSize: 14,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
+            const SizedBox(height: 8),
+          ],
+        ),
+      );
+    } else {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      );
+    }
   }
 
   Widget buildCheckboxRow(
