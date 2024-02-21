@@ -151,45 +151,52 @@ class BookListState extends State<BookList> {
                   if (books.isEmpty) {
                     return const Center(child: Text('No books available'));
                   }
-                  return GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 8.0,
-                      mainAxisSpacing: 8.0,
+                  return Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: GridView.builder(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16.0,
+                        mainAxisSpacing: 16.0,
+                      ),
+                      itemCount: books.length,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      BookDetailsPage(book: books[index]),
+                                ));
+                          },
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                  child: Image.network(books[index].imageURL!,
+                                      fit: BoxFit.cover, errorBuilder:
+                                          (context, error, stackTrace) {
+                                    return Container(
+                                        decoration: BoxDecoration(
+                                          border:
+                                              Border.all(color: Colors.grey),
+                                        ),
+                                        child: Image.asset('assets/logo.png',
+                                            fit: BoxFit.cover));
+                                  }),
+                                ),
+                              ),
+                              Center(
+                                  child: Text(books[index].title,
+                                      textAlign: TextAlign.center)),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                    itemCount: books.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    BookDetailsPage(book: books[index]),
-                              ));
-                        },
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: Image.network(books[index].imageURL!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.grey),
-                                    ),
-                                    child: Image.asset('assets/logo.png',
-                                        fit: BoxFit.cover));
-                              }),
-                            ),
-                            Center(
-                                child: Text(books[index].title,
-                                    textAlign: TextAlign.center)),
-                          ],
-                        ),
-                      );
-                    },
                   );
                 }
               },

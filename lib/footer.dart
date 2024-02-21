@@ -110,10 +110,18 @@ class FooterState extends State<Footer> {
         String scannedISBN = result.rawContent;
         launchBookDetailsPage(scannedISBN, context);
       } else {
-        // Handle other barcode formats or invalid scans
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to scan ISBN'),
+          ),
+        );
       }
     } catch (e) {
-      // Handle errors that may occur during scanning
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to scan ISBN'),
+        ),
+      );
     }
   }
 
@@ -145,7 +153,7 @@ class FavouriteBooksPage extends StatelessWidget {
         future: fetchFavoriteBooksFromFirestore(),
         builder: (context, AsyncSnapshot<List<Book>> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CircularProgressIndicator();
+            return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Text('Error: ${snapshot.error}');
           } else {
@@ -154,40 +162,45 @@ class FavouriteBooksPage extends StatelessWidget {
                 ? const Center(
                     child: Text('No favourite books'),
                   )
-                : GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 8.0,
-                      mainAxisSpacing: 8.0,
-                    ),
-                    itemCount: favoriteBooks.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  BookDetailsPage(book: favoriteBooks[index]),
-                            ),
-                          );
-                        },
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: Image.network(
-                                favoriteBooks[index].imageURL ?? '',
-                                fit: BoxFit.cover,
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: GridView.builder(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 8.0,
+                        mainAxisSpacing: 8.0,
+                      ),
+                      itemCount: favoriteBooks.length,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    BookDetailsPage(book: favoriteBooks[index]),
                               ),
-                            ),
-                            Center(
-                                child: Text(favoriteBooks[index].title,
-                                    textAlign: TextAlign.center)),
-                          ],
-                        ),
-                      );
-                    },
+                            );
+                          },
+                          child: Column(
+                            children: [
+                              Expanded(
+                                  child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8.0),
+                                child: Image.network(
+                                  favoriteBooks[index].imageURL ?? '',
+                                  fit: BoxFit.cover,
+                                ),
+                              )),
+                              Center(
+                                  child: Text(favoriteBooks[index].title,
+                                      textAlign: TextAlign.center)),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   );
           }
         },
